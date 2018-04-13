@@ -13,13 +13,23 @@ BOLD = '\033[1m'
 UNDERLINE = '\033[4m'
 END = '\033[0m'
 
-counter = 0
+# Extra stuff
+counter = 0  # for oof (??)
 inventory = []
+invCapacity = 8
 health = 100
-onFire = False
+
+# armor
+head = None
+chest = None
+legs = None
+feet = None
+
+# classes
+
 
 class Room(object):
-    def __init__(self, name, description, north, south, east, west, up, down, character, item):
+    def __init__(self, name, description, north, south, east, west, up, down, character, items):
         self.NAME = name
         self.DESCRIPTION = description
         self.north = north
@@ -29,7 +39,7 @@ class Room(object):
         self.up = up
         self.down = down
         self.character = character
-        self.item = item
+        self.item = items
         self.looping_oof = ["oof"]
         self.ping_phrases = ['pls', 'pls stop', 'pls stop doing this', 'pls just continue the game',
                              'just play the game', 'y u do dis', 'stop', 'stop doing this']
@@ -37,6 +47,8 @@ class Room(object):
     def print_descriptions(self):
         print(BLUE + self.NAME + END)
         print(self.DESCRIPTION)
+        if current_node.item is not None and not current_node.item.isTaken:
+            print("It seems you can take a... " + current_node.item.name.lower())
 
     def move(self, directions):
         global current_node
@@ -99,11 +111,14 @@ class Character(object):
         print(self.description)
 
     def talk(self):
-        print("He says...")
-        time.sleep(1)
-        print(self.dialogue)
-        time.sleep(.5)
-        self.hasTalked = True
+        if self.dialogue is None:
+            print(BLUE + BOLD + "This person doesn't seem to say anything." + END)
+        else:
+            print("He says...")
+            time.sleep(1)
+            print(self.dialogue)
+            time.sleep(.5)
+            self.hasTalked = True
 
     def kill(self):
         print(BOLD + RED + "oh woops you killed " + self.name.lower() + END)
@@ -112,16 +127,33 @@ class Character(object):
 
 
 class Item(object):
-    def __init__(self, name): self.name = name
+    def __init__(self, name, desc):
+        self.name = name
+        self.description = desc
+        self.isTaken = False
 
-    def take(self): inventory.append(self)
+    def print_descriptions(self):
+        print(PURPLE + BOLD + self.name + END)
+        print(self.description)
 
-    def drop(self): inventory.pop(self.index())
+    def take(self):
+        if len(inventory) == invCapacity:
+            print(RED + BOLD + "Your inventory is full." + END)
+        else:
+            inventory.append(self)
+            print(CYAN + BOLD + "You take the " + self.name.lower() + "." + END)
+            self.isTaken = True
+
+    def drop(self):
+        inventory.pop(inventory.index(self))
+        print(CYAN + BOLD + "You drop the " + self.name.lower() + '.' + END)
+        current_node.item = self
+        self.isTaken = False
 
 
 class Weapon(Item):
-    def __init__(self, name, damage):
-        super(Weapon, self).__init__(name)
+    def __init__(self, name, desc, damage):
+        super(Weapon, self).__init__(name, desc)
         self.damage = damage
 
     def hit(self): current_node.character.health -= self.damage
@@ -130,13 +162,29 @@ class Weapon(Item):
 
 
 class Sword(Weapon):
-    def __init__(self, name, damage):
-        super(Sword, self).__init__(name, damage)
+    def __init__(self, name, desc, damage):
+        super(Sword, self).__init__(name, desc, damage)
+
+    def hit(self):
+        random_number = random.randint(0, 10)
+        if random_number % 2 == 0:  # crit
+            current_node.character.health -= damage * 2
+        else:
+            current_Node.character.health -= damage
+
+
+class BackwardsGun(Weapon):
+    def __init__(self, name, desc):
+        super(BackwardsGun, self).__init__(name, desc, 100)
+
+    def shoot(self):
+        print(RED + BOLD + "you shot yourself and died" + END)
+        quit(0)
 
 
 class Hammer(Weapon):
     def __init__(self, name):
-        super(Hammer, self).__init__(name, 1)
+        super(Hammer, self).__init__(name, desc, 1)
 
     def break_door(self):
         print(BOLD + "..." + END)
@@ -144,32 +192,168 @@ class Hammer(Weapon):
         print(BOLD + BLUE + "Why is this hammer made of rubber?" + END)
 
 
-class Food(Item):
-    def __init__(self, name, effect):
-        super(Food, self).__init__(name)
-        self.effect = effect
-        self.isEaten = False
+class Consumable(Item):
+    def __init__(self, name, desc):
+        super(Consumable, self).__init__(name, desc)
 
-    def effect(self):
-        if self.Eaten:
-            if self.effect == 'hot':
-                global onFire
-                onFire = True
+    def use(self):
+        inventory.pop(inventory.index(self))
+
+
+class Food(Consumable):
+    def __init__(self, name, desc):
+        super(Food, self).__init__(name, desc)
 
     def eat(self):
-        self.isEaten = True
-        inventory.pop(self.index())
+        inventory.pop(inventory.index(self))
+        print(PURPLE + BOLD + "yummy" + END)
 
 
-cookie = Character("Cookiezi", "This person seems to be sitting behind a desk with a computer, mashing his keyboard "
-                   "slightly, but you could definitely hear it. On his monitor, he seems to be clicking "
-                   "circles...", None, None, None)
+class Drink(Consumable):
+    def __init__(self, name, desc):
+        super(Drink, self).__init__(name, desc)
+
+    def drink(self):
+        inventory.pop(inventory.index(self))
+        print(BLUE + BOLD + "You drink the %s and its bottle disappears..." + END % self.name.lower())
+
+
+class Container(Item):
+    def __init__(self, name, desc, capacity):
+        super(Container, self).__init__(name, desc)
+        self.capacity = capacity
+        self.inventory = []
+        self.isEmpty = False
+
+    def put_item_in(self, item_name):
+        if self.inventory.len() == capacity:
+            print(RED + BOLD + "Your inventory is full." + END)
+        else:
+            self.inventory.append(item_name)
+            print(CYAN + BOLD + "You put the %s in the %s." + END % (item_name.lower(), self.name.lower()))
+
+
+class Box(Container):
+    def __init__(self, name, desc):
+        super(Box, self).__init__(name, desc, 4)
+
+    def put_item_in(self, item_name):
+        if self.inventory.len() == capacity:
+            print(RED + BOLD + "Your inventory is full." + END)
+        else:
+            self.inventory.append(item_name)
+            print(CYAN + BOLD + "You put the %s in the box" + END % item_name.lower())
+
+    def wear(self):
+        global head
+        head = self
+
+
+class Ball(Item):
+    def __init__(self, name, desc):
+        super(Ball, self).__init__(name, desc)
+
+    def throw(self):
+        inventory.pop(inventory.index(ball))
+        print("You throw the ball and in a blink of "
+                  "an eye, one of the dogs zoom in a blink "
+                  "of an eye and catch the ball.")
+        time.sleep(4)
+        print(YELLOW + BOLD + "The dog then hovers and starts floating to orbit.")
+        time.sleep(3)
+        print(YELLOW + BOLD + "The dog comes back with a bucket with even more balls.")
+        time.sleep(1)
+
+class Wearable(Item):
+    def __init__(self, name, desc, body):
+        super(Wearable, self).__init__(name, desc)
+        self.body = body
+
+    def equip(self):
+        if self.body is not None:
+            print(RED + BOLD + "You're already wearing something." + END)
+        else:
+            self.body = self
+            inventory.pop(inventory.index(self))
+            print(BLUE + BOLD + "You wear the " + self.name + END)
+
+    def un_equip(self):
+        self.body = None
+        print(BLUE + BOLD + "You take off the " + self.name + END)
+        inventory.append(self)
+
+
+class Mask(Wearable):
+    def __init__(self, name, desc):
+        super(Mask, self).__init__(name, desc, head)
+
+    def equip(self):
+        global head
+        if head is not None:
+            print(RED + BOLD + "You're already wearing something." + END)
+        else:
+            head = self
+            inventory.pop(inventory.index(self))
+            print(BLUE + BOLD + "You wear the " + self.name + END)
+
+    def un_equip(self):
+        global head
+        head = None
+        inventory.append(self)
+
+
+class Shirt(Wearable):
+    def __init__(self, name, desc):
+        super(Shirt, self).__init__(name, desc, chest)
+
+    def equip(self):
+        global chest
+        if chest is None:
+            print(RED + BOLD + "You're already wearing something." + END)
+        else:
+            chest = self
+            inventory.pop(inventory.index(self))
+            print(BLUE + BOLD + "You wear the %s." + END + self.name.lower())
+
+    def un_equip(self):
+        global chest
+        print(BLUE + BOLD + "You take off the %s." + END + self.name.lower())
+        chest = None
+        inventory.append(self)
+
+
+class Book(Item):
+    def __init__(self, name, desc, read_text):
+        super(Book, self).__init__(name, desc)
+        self.readText = read_text
+
+    def read(self):
+        print(self.read_text)
+
+
+# Characters and Items
+
+Cookie = Character("Cookiezi", "This person seems to be sitting behind a desk with a computer mashing his keyboard\n"
+                               "slightly, but you could definitely hear it. On his monitor, he seems to be clicking "
+                               "circles...", None, None, None)
 jeff = Character("jeff", "he's sitting on a chair playing a game on the left side of the room", "stop", ['pen'], 50)
+
+cookie = Food("Cookie", "A chocolate chip cookie. Seems delicious.")
+bed = Item("Bed", "Your average-looking bed.")
+ball = Ball("Ball", "A regular, old tennis ball.")
+techRoomKey = Item("Key", "The key has a message engraved that says 'Tech Room Key'...")
+backwardsGun = BackwardsGun("Gun", "It's a gun, but its barrel is pointing the opposite way.")
+water = Drink("Water Bottle", "A water bottle that has an off-center label that says 'Fiji'.")
+cookieMask = Mask("Mask", "A mask of a smiling man wearing glasses with slits in the eyes. Wonder what you'd use it "
+                          "for.")
+shirt = Shirt("Shirt", "Just a plain white shirt.")
+
+# Rooms
 
 BEDROOM = Room("Bedroom",
                "You are in a bedroom full of anime posters, figures, etc."
                "\nYou have a computer sitting on a desk to your north, and a door to the east.",
-               "COMPUTER", None, "HALLWAY", None, None, None, None, None)
+               "COMPUTER", None, "HALLWAY", None, None, None, None, bed)
 COMPUTER = Room("Computer",
                 "On the desk lies a computer with a crappy membrane keyboard and a mouse. "
                 "On the computer lies a weird game called 'osu!'...",
@@ -181,42 +365,45 @@ HALLWAY = Room("Hallway",
 EMPTY_ROOM = Room("Empty Room",
                   "You enter an empty room, but in the southern-most corner there's a table with what seems to be "
                   "a drawing tablet, as well as a keyboard.",
-                  "HALLWAY", "TABLE", None, None, None, None, jeff, None)
-TABLE = Room("Table", "On the table there are empty boxes with labels saying 'HyperX Alloy FPS Mechanical Gaming "
-             "Keyboard' as well as another box that says 'Huion Graphics Tablet'...",
-             "EMPTY_ROOM", None, None, None, None, None, None, None)
+                  "HALLWAY", "TABLE", None, None, None, None, jeff, backwardsGun)
+TABLE = Room("Table",
+             "On the table there is a key and empty boxes with labels saying "
+             "'HyperX Alloy FPS Mechanical Gaming Keyboard' as well as another\n"
+             "box that says 'Huion Graphics Tablet'...",
+             "EMPTY_ROOM", None, None, None, None, None, None, techRoomKey)
 BATHROOM = Room("Bathroom",
-                "The bathroom is set with two sinks, a bathtub and a toilet. "
+                "The bathroom is set with two sinks, a bathtub and a toilet.\n"
                 "There are also toiletries sitting on top of the sink counter.",
                 None, None, None, "HALLWAY", None, None, None, None)
 DINING_ROOM = Room("Dining Room",
                    "The dining room has a table with a fancy green cloth and a basket full of fake fruit."
                    "\nThe kitchen leads east, and the living room to the west.",
-                   None, "HALLWAY", "KITCHEN1", "LIVING_ROOM", "HALLWAY", None, None, None)
+                   None, "HALLWAY", "KITCHEN1", "LIVING_ROOM", "HALLWAY", None, None, cookie)
 KITCHEN1 = Room("Entrance to Kitchen",
                 "In the kitchen there's a refrigerator and a pantry full of "
-                "food, as well as a long counter to eat food on.\nThere's more stuff farther south.",
+                "food,\nas well as a long counter to eat food on. There's more stuff farther south.",
                 "DINING_ROOM", "KITCHEN2", None, None, None, None, None, None)
 KITCHEN2 = Room("Farther Side of Kitchen",
-                "This side of the Kitchen has a flat screen tv mounted to the wall with a smaller table below "
-                "it that holds the cable box, and an old, useless game console.\nThere's what seems to be a "
-                "laundry room to the west as well as a slide door leading outside east.",
-                "KITCHEN1", None, "BACKYARD", "LAUNDRY_ROOM", None, None, None, None)
+                "This side of the Kitchen has a flat screen tv mounted to the wall\nwith a smaller table below "
+                "it that holds the cable box, and an old,\nuseless game console. There's what seems to be a "
+                "laundry room to the\nwest as well as a slide door leading outside east.",
+                "KITCHEN1", None, "BACKYARD1", "LAUNDRY_ROOM", None, None, None, None)
 LAUNDRY_ROOM = Room("Laundry Room",
                     "The Laundry Room has a washing and drying machine, as well as a cabinet.",
-                    "CABINET", None, "KITCHEN2", None, None, None, None, None)
+                    "CABINET", None, "KITCHEN2", None, None, None, None, water)
 CABINET = Room("Inside of Cabinet",
-               "Inside the cabinet contains jackets and sweaters. The shelf above it has a few boxes put for "
-               "storage, but there's a paper mask of a man's face with glasses smiling and squinting his "
-               "eyes...",  # osu! joke, don't worry about it
-               None, "LAUNDRY_ROOM", "KITCHEN2", None, None, None, None, None)
+               "Inside the cabinet contains jackets and sweaters. The shelf above it has a \n"
+               "few boxes put for storage, but there's a paper mask of a man's face here...",
+               # osu! joke, don't worry about it
+               None, "LAUNDRY_ROOM", "KITCHEN2", None, None, None, None, cookieMask)
 BACKYARD1 = Room("Backyard",
-                 "The empty backyard had little to no grass, making it look like a desert. Not only that, there "
-                 "are two dogs that seem to not care about it at all and just have fun with the tennis balls "
-                 "around them.", "BACKYARD2", None, None, "KITCHEN2", None, None, None, None)
+                 "The empty backyard had little to no grass, making it look like a desert.\nNot only that, there "
+                 "are two dogs that seem to not care about it at all\nand just have fun with the tennis balls "
+                 "around them.",
+                 "BACKYARD2", None, None, "KITCHEN2", None, None, None, ball)
 BACKYARD2 = Room("Farther side of the Backyard",
                  "This side of the backyard has an unused grill and a bench lying at the wall of the house. And "
-                 "more tennis balls...", None, "BACKYARD1", None, None, None, None, None, None)
+                 "more tennis balls...", None, "BACKYARD1", None, None, None, None, None, ball)
 LIVING_ROOM = Room("Living Room",
                    "The living room has couches set with a large TV.\nThe exit seems to go the south.",
                    None, "DOOR", "DINING_ROOM", None, None, None, None, None)
@@ -235,43 +422,60 @@ DRIVEWAY = Room("Driveway",
 STORE = Room("Walm", "Sorry to keep your hopes up, this store is closed.",
              None, None, "DRIVEWAY", None, None, None, None, None)
 
-
-"""
-LOCKED_DOOR = Room("Tech Room",
-                   "The door you break leads you into room filled with bright looking technology. The whole "
-                   "room seems to be white-ish. The whole room seems to be some sort of 'man cave'. You feel "
-                   "so intimidated that you shouldn't touch any of the equipment."
-                   "DOOR", None, None, None, None, None, cookie)
-"""
+TECH_ROOM = Room("Tech Room",
+                 "The door you open leads you into room filled with bright looking technology.\n"
+                 "The whole room seems to be white-ish. The whole room seems to be some sort of 'man cave'.\n"
+                 "You feel so intimidated that you shouldn't touch any of the equipment.",
+                 "DOOR", None, None, None, None, None, Cookie, None)
 
 dir1 = ['north', 'south', 'east', 'west', 'up', 'down']
 dir2 = ['n', 's', 'e', 'w', 'u', 'd']
-
 
 current_node = BEDROOM
 current_node_hasChanged = True
 
 while True:
+    if health == 0:
+        print(RED + BOLD + "you died" + END)
+        break
     print(RED + BOLD + "Health: " + END + str(health))
     if current_node_hasChanged:
         current_node.print_descriptions()
         current_node_hasChanged = False
-    if current_node.character is not None and current_node.character.isAlive and \
-       current_node.character.hasTalked is False:
-        current_node.character.print_descriptions()
-    command = input('>').lower().strip()
+        if current_node.character is not None \
+                and current_node.character.isAlive:
+            current_node.character.print_descriptions()
+    command = input('>').lower()
     if command == 'quit':
         quit(0)
-    elif health == 0:
-        break
     elif command == 'look' or command == 'l':
         current_node.print_descriptions()
-        if current_node.character is None:
+        if current_node.character is None or not current_node.character.isAlive:
             continue
         else:
             current_node.character.print_descriptions()
     elif command == "jump":
         current_node.jump()
+    elif command == 'inv' or command == 'inventory':
+        if not inventory:
+            print(RED + BOLD + "You don't have anything in your inventory." + END)
+        else:
+            print("Your inventory:")
+            for item in inventory:
+                print(BOLD + item.name.lower() + END)
+    elif command == 'armor':
+        if head is None and chest is None and legs is None and feet is None:
+            print(RED + BOLD + "You're wearing nothing." + END)
+        else:
+            print("You are wearing:")
+            if head is not None:
+                print("Head: " + head.name)
+            if chest is not None:
+                print("Chest: " + chest.name)
+            if legs is not None:
+                print("Legs: " + legs.name)
+            if feet is not None:
+                print("Feet: " + feet.name)
     elif command == "oof":
         current_node.oof()
     elif command == "ping":
@@ -279,8 +483,8 @@ while True:
         counter += 1
     elif command == 'flush':
         current_node.flush()
-    elif command == 'no u':
-        print(BOLD + RED + 'no u' + END)
+    elif command == 'beep':
+        print('boop')
     elif command in dir2:
         pos = dir2.index(command)
         command = dir1[pos]
@@ -292,11 +496,302 @@ while True:
             current_node_hasChanged = False
     elif command in dir1:
         try:
-            current_node.move(command.upper())
+            current_node.move(command.lower())
             current_node_hasChanged = True
         except KeyError:
             print(RED + "You can't go that way." + END)
             current_node_hasChanged = False
+    elif 'take off' in command or 'unequip' in command:
+        if command == 'take off' or command == 'unequip':
+            if head is None and chest is None and legs is None and feet is None:
+                print(RED + BOLD + "You aren't wearing anything." + END)
+            else:
+                unequip_command = input("What do you want to take off?\n>").lower()
+                if head is not None:
+                    if head == bed and unequip_command == 'bed':
+                        head = None
+                        inventory.append(bed)
+                        print(BLUE + BOLD + "You take off the bed." + END)
+                    elif unequip_command == head.name.lower():
+                        head.unequip()
+                    else:
+                        print(RED + BOLD + "You aren't wearing that." + END)
+                elif chest is not None:
+                    if unequip_command == chest.name.lower():
+                        chest.unequip()
+                    else:
+                        print(RED + BOLD + "You aren't wearing that." + END)
+                elif legs is not None:
+                    if unequip_command == legs.name.lower():
+                        legs.unequip()
+                    else:
+                        print(RED + BOLD + "You aren't wearing that." + END)
+                elif feet is not None:
+                    if unequip_command == feet.name.lower():
+                        feet.unequip()
+                    else:
+                        print(RED + BOLD + "You aren't wearing that." + END)
+                else:
+                    print(RED + BOLD + "You aren't wearing that.")
+        else:
+            if head is not None:
+                if 'bed' in command:
+                    head = None
+                    inventory.append(bed)
+                    print(BLUE + BOLD + "You take off the bed." + END)
+                elif head.name.lower() in command:
+                    head.unequip()
+            elif chest is not None:
+                if chest.name.lower() in command:
+                    chest.unequip()
+            elif legs is not None:
+                if legs.name.lower() in command:
+                    legs.unequip()
+            elif feet is not None:
+                if feet.name.lower() in command:
+                    feet.unequip()
+            else:
+                print(RED + BOLD + "You aren't wearing anything.")
+    elif 'take' in command or 'pickup' in command.strip():
+        if command == 'take' or command.strip() == 'pickup':
+            take_command = input("What do you want to take?\n>").lower().strip()
+            if take_command == current_node.item.name.lower():
+                if not current_node.item.isTaken:
+                    current_node.item.take()
+                else:
+                    print(RED + BOLD + "You already took that." + END)
+            elif 'nothing' in take_command or 'nevermind' in take_command or 'nvm' in take_command:
+                print("ok")
+            else:
+                print(RED + BOLD + "That item isn't here." + END)
+        elif current_node.item.name.lower() in command:
+            current_node.item.take()
+        else:
+            print(RED + BOLD + "That item isn't here." + END)
+    elif 'drop' in command:
+        if not inventory:
+            print(RED + BOLD + "You don't have anything in your inventory." + END)
+        elif command == 'drop':
+            drop_command = input("What do you want to drop?\n>").lower()
+            for item in inventory:
+                if item.name.lower() in drop_command:
+                    item.drop()
+                else:
+                    print(RED + BOLD + "You can't drop that." + END)
+        else:
+            for item in inventory:
+                if item.name.lower() in command:
+                    item.drop()
+                else:
+                    print(RED + BOLD + "You don't have that in your inventory." + END)
+                    break
+    elif 'throw' in command:
+        if not inventory:
+            print(RED + BOLD + "You don't have anything in your inventory." + END)
+        elif command == 'throw':
+            throw_command = input("What do you want to throw?\n>").lower()
+            if throw_command == 'ball':
+                ball.throw()
+            elif 'nothing' in throw_command or 'nevermind' in throw_command or 'nvm' in throw_command:
+                print("ok")
+            else:
+                for item in inventory:
+                    if throw_command == item:
+                        item.drop()
+                        break
+                    else:
+                        print(RED + BOLD + "That's not in your inventory." + END)
+        else:
+            for item in inventory:
+                if item.name.lower() in command:
+                    if item == ball:
+                        ball.throw()
+                        ball.isTaken = False
+                        break
+                    else:
+                        item.drop()
+                else:
+                    print(RED + BOLD + "You don't have that in your inventory." + END)
+    elif 'talk' in command:
+        if current_node.character is None:
+            print(RED + BOLD + "There is no one here." + END)
+        elif command == 'talk':
+            talk_command = input("Who do you want to talk to?\n>").lower().strip()
+            if talk_command == current_node.character.name:
+                if current_node.character.isAlive:
+                    current_node.character.talk()
+                else:
+                    print(RED + BOLD + "That person is dead." + END)
+            elif 'noone' in talk_command or 'nevermind' in talk_command or 'nvm' in talk_command:
+                print("ok")
+            else:
+                print(RED + BOLD + "That person isn't here." + END)
+        elif current_node.character.name.lower() in command:
+            if current_node.character.isAlive:
+                current_node.character.talk()
+            elif not current_node.character.isAlive:
+                print(RED + BOLD + "That person is dead.")
+            else:
+                print(RED + BOLD + "That person isn't here." + END)
+        else:
+            print(RED + BOLD + "That person isn't here." + END)
+
+
+
+    elif 'wear' in command:
+        if not inventory:
+            print(RED + BOLD + "You don't have anything in your inventory." + END)
+        else:
+            if command == 'wear':
+                wear_command = input("What do you want to wear?\n>").lower()
+                if wear_command == 'bed':
+                    head = None
+                    inventory.append(bed)
+                    print(BLUE + BOLD + "You take off the bed." + END)
+
+
+
+                    
+                else:
+                    print(RED + BOLD + "You aren't wearing that.")
+
+
+
+
+            else:
+                print(RED + BOLD + "You aren't wearing that.")
+
+
+
+
+
+
+
+
+
+
+    elif 'open door' in command:
+        if current_node == LOCKED_DOOR:
+            if techRoomKey in inventory:
+                current_node = TECH_ROOM
+                print(BLUE + BOLD + "You open the door.\n" + END)
+                current_node_hasChanged = True
+            else:
+                print(RED + BOLD + "You don't have a key." + END)
+        else:
+            print(RED + BOLD + "There is no locked door to open.")
+    elif 'shoot' in command:
+        if backwardsGun in inventory:
+            if current_node.character.name.lower() in command:
+                backwardsGun.shoot()
+            else:
+                shoot_command = input("Who do you want to shoot?\n>").lower().strip()
+                if 'noone' in shoot_command or 'nevermind' in shoot_command or 'nvm' in shoot_command:
+                    print("ok")
+                else:
+                    backwardsGun.shoot()
+        else:
+            print(RED + BOLD + "You don't have a gun." + END)
+    elif 'check' in command or 'look at' in command:
+        if not inventory:
+            print(RED + BOLD + "You don't have anything in your inventory." + END)
+        else:
+            for item in inventory:
+                if str(item.name.lower()) in command:
+                    item.print_descriptions()
+                    break
+                else:
+                    check_command = input("What do you want to check?\n>").lower().strip()
+                    if check_command == str(item.name.lower()):
+                        item.print_descriptions()
+                        break
+                    elif 'nothing' in check_command or 'nevermind' in check_command or 'nvm' in check_command:
+                        print("ok")
+                    else:
+                        print(RED + BOLD + "That's not in your inventory." + END)
+    elif 'drink' in command:
+        if 'water bottle' in command:
+            water.drink()
+        else:
+            drink_command = input("What do you want to drink?\n>").lower().strip()
+            if drink_command == 'water bottle':
+                water.drink()
+            elif 'nothing' in drink_command or 'nevermind' in drink_command or 'nvm' in drink_command:
+                print("ok")
+            else:
+                print(RED + BOLD + "You can't drink that." + END)
+    elif 'play' in command:
+        if 'computer' in command:
+            if head == cookieMask:
+                print(PURPLE + BOLD + "You're so good at this game that the computer exploded" + END)
+                time.sleep(1)
+                print(PURPLE + BOLD + "And it pops back..." + END)
+            else:
+                print(RED + BOLD + "You play the game and rage in frustration at why you're so bad at it..." + END)
+        else:
+            play_command = input("What do you want to play?\n>").lower().strip()
+            if play_command == 'computer':
+                if head == cookieMask:
+                    print(PURPLE + BOLD + "You're so good at this game that the computer exploded" + END)
+                    time.sleep(3)
+                    print(PURPLE + BOLD + "And it pops back..." + END)
+                else:
+                    print(RED + BOLD + "You play the game and rage in frustration at why you're so bad at it..." + END)
+            elif 'nothing' in take_command or 'nevermind' in take_command or 'nvm' in take_command:
+                print("ok")
+            else:
+                print(RED + BOLD + "You can't play that." + END)
+
+
+
+
+
+
+    elif 'kill' in command:
+        if current_node.character is None:
+            print(RED + BOLD + "There is no one here." + END)
+        else:
+            if command == 'kill':
+                kill_command = input("Who do you want to kill?\n>").lower()
+                if kill_command == 'me' or kill_command == 'self':
+                    time.sleep(2)
+                    print("ok")
+                    time.sleep(.5)
+                    while health != 0:
+                        health -= 1
+                        print(RED + BOLD + "Health: " + END + str(health))
+                        time.sleep(.01)
+                        if health == 0:
+                            break
+                elif kill_command == current_node.character.name.lower():
+                    if current_node.character.isAlive:
+                        current_node.character.kill()
+                    else:
+                        print(RED + BOLD + "That person is dead." + END)
+                else:
+                    print(RED + BOLD + "That person isn't here." + END)
+            else:
+                if 'me' in command or 'self' in command:
+                    time.sleep(2)
+                    print("ok")
+                    time.sleep(.5)
+                    while health != 0:
+                        health -= 1
+                        print(RED + BOLD + "Health: " + END + str(health))
+                        time.sleep(.01)
+                        if health == 0:
+                            break
+                elif current_node.character.name.lower() in command:
+                    if current_node.character.isAlive:
+                        current_node.character.kill()
+                    else:
+                        print(RED + BOLD + "That person is dead." + END)
+                else:
+                    print(RED + BOLD + "That person isn't here." + END)
+
+
+
+
     else:
         print("Command not Recognized")
         current_node_hasChanged = False

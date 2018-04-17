@@ -48,7 +48,10 @@ class Room(object):
         print(BLUE + self.NAME + END)
         print(self.DESCRIPTION)
         if current_node.item is not None and not current_node.item.isTaken:
-            print("It seems you can take a... " + current_node.item.name.lower())
+            print("It seems you can take a..." + current_node.item.name.lower())
+            # if isinstance(self.items, list):
+            #     print("It seems you can take:")
+            #     for items in inventory:
 
     def move(self, directions):
         global current_node
@@ -223,6 +226,7 @@ class Container(Item):
         super(Container, self).__init__(name, desc)
         self.capacity = capacity
         self.inventory = []
+        self.isOpen = False
         self.isEmpty = False
 
     def put_item_in(self, item_name):
@@ -231,6 +235,31 @@ class Container(Item):
         else:
             self.inventory.append(item_name)
             print(CYAN + BOLD + "You put the %s in the %s." + END % (item_name.lower(), self.name.lower()))
+
+    def take_out(self, item_name):
+        self.inventory.pop(self.inventory.index(item_name))
+        inventory.append(item_name)
+        print(CYAN + BOLD + "You take the %s out of the %s." + END % (item_name.lower(), self.name.lower()))
+
+    def open(self):
+        if not self.isOpen:
+            self.isOpen = True
+            print(BLUE + BOLD + "You open the " + self.name.lower() + "." + END)
+        else:
+            print(RED + BOLD + "That is already open." + END)
+
+    def close(self):
+        if self.isOpen:
+            self.isOpen = False
+            print(BLUE + BOLD + "You close the " + self.name.lower() + "." + END)
+        else:
+            print(RED + BOLD + "That is already closed." + END)
+
+    def drop(self):
+        for items in self.inventory:
+            current_node.item = items
+            self.inventory.pop(self.inventory.index(items))
+
 
 
 class Box(Container):
@@ -347,6 +376,7 @@ water = Drink("Water Bottle", "A water bottle that has an off-center label that 
 cookieMask = Mask("Mask", "A mask of a smiling man wearing glasses with slits in the eyes. Wonder what you'd use it "
                           "for.")
 shirt = Shirt("Shirt", "Just a plain white shirt.")
+weirdBag = Container("Backpack", "Just a regular backpack.", 4)
 
 # Rooms
 
@@ -357,7 +387,7 @@ BEDROOM = Room("Bedroom",
 COMPUTER = Room("Computer",
                 "On the desk lies a computer with a crappy membrane keyboard and a mouse. "
                 "On the computer lies a weird game called 'osu!'...",
-                None, "BEDROOM", "HALLWAY", None, None, None, None, None)
+                None, "BEDROOM", "HALLWAY", None, None, None, None, weirdBag)
 HALLWAY = Room("Hallway",
                "The hallway has a few paintings with a dull red carpet on the wooden floor."
                "\nThere are stairs leading down to the south, as well as another room across yours.",
@@ -635,41 +665,32 @@ while True:
                 print(RED + BOLD + "That person isn't here." + END)
         else:
             print(RED + BOLD + "That person isn't here." + END)
-
-
-
     elif 'wear' in command:
         if not inventory:
             print(RED + BOLD + "You don't have anything in your inventory." + END)
         else:
-            if command == 'wear':
-                wear_command = input("What do you want to wear?\n>").lower()
-                if wear_command == 'bed':
-                    head = None
-                    inventory.append(bed)
-                    print(BLUE + BOLD + "You take off the bed." + END)
-
-
-
-                    
+            for item in inventory:
+                if command == 'wear':
+                    wear_command = input("What do you want to wear?\n>").lower()
+                    if wear_command == 'bed':
+                        time.sleep(1)
+                        print("ok")
+                        time.sleep(.5)
+                        head = bed
+                        print(BLUE + BOLD + "You wear the bed." + END)
+                    elif wear_command == item.name.lower():
+                        item.equip()
+                    else:
+                        print(RED + BOLD + "That item isn't in your inventory." + END)
+                elif 'bed' in command:
+                    time.sleep(1)
+                    print("ok")
+                    head = bed
+                    print(BLUE + BOLD + "You wear the bed." + END)
+                elif item.name.lower() in command:
+                    item.equip()
                 else:
                     print(RED + BOLD + "You aren't wearing that.")
-
-
-
-
-            else:
-                print(RED + BOLD + "You aren't wearing that.")
-
-
-
-
-
-
-
-
-
-
     elif 'open door' in command:
         if current_node == LOCKED_DOOR:
             if techRoomKey in inventory:
@@ -682,44 +703,69 @@ while True:
             print(RED + BOLD + "There is no locked door to open.")
     elif 'shoot' in command:
         if backwardsGun in inventory:
-            if current_node.character.name.lower() in command:
+            if command == 'shoot':
+                backwardsGun_command = input("Who do you want to shoot?\n>").lower()
+                if backwardsGun_command == current_node.character.name.lower():
+                    backwardsGun.shoot()
+                else:
+                    print(RED + BOLD + "That person isn't here." + END)
+            elif current_node.character.name.lower() in command:
                 backwardsGun.shoot()
             else:
-                shoot_command = input("Who do you want to shoot?\n>").lower().strip()
-                if 'noone' in shoot_command or 'nevermind' in shoot_command or 'nvm' in shoot_command:
+                print(RED + BOLD + "That person isn't here." + END)
+        else:
+            print(RED + BOLD + "You don't have anything to shoot with." + END)
+    elif 'check' in command or 'look at' in command:
+        for item in inventory:
+            if not inventory:
+                print(RED + BOLD + "You don't have anything in your inventory." + END)
+            elif command == 'check' or command.strip() == 'lookat':
+                check_command = input("What do you want to check?\n>").lower()
+                if check_command == item.name.lower():
+                    item.print_descriptions()
+                elif 'nothing' in check_command or 'nevermind' in check_command or 'nvm' in check_command:
                     print("ok")
                 else:
-                    backwardsGun.shoot()
-        else:
-            print(RED + BOLD + "You don't have a gun." + END)
-    elif 'check' in command or 'look at' in command:
+                    print(RED + BOLD + "You don't have that item." + END)
+            elif item.name.lower() in command:
+                item.print_descriptions()
+            else:
+                print(RED + BOLD + "You don't have that item." + END)
+    elif 'drink' in command:
         if not inventory:
             print(RED + BOLD + "You don't have anything in your inventory." + END)
         else:
             for item in inventory:
-                if str(item.name.lower()) in command:
-                    item.print_descriptions()
-                    break
-                else:
-                    check_command = input("What do you want to check?\n>").lower().strip()
-                    if check_command == str(item.name.lower()):
-                        item.print_descriptions()
-                        break
-                    elif 'nothing' in check_command or 'nevermind' in check_command or 'nvm' in check_command:
+                if command == 'drink':
+                    drink_command = input("What do you want to drink?\n>").lower()
+                    if drink_command == item.name.lower():
+                        if item == water:
+                            water.drink()
+                        elif item == bed:
+                            time.sleep(1)
+                            print("ok")
+                            time.sleep(.5)
+                            print(BLUE + BOLD + "You drink the bed." + END)
+                            inventory.pop(inventory.index(bed))
+                        else:
+                            print(RED + BOLD + "You can't drink that." + END)
+                    elif 'nothing' in drink_command or 'nevermind' in drink_command or 'nvm' in drink_command:
                         print("ok")
                     else:
                         print(RED + BOLD + "That's not in your inventory." + END)
-    elif 'drink' in command:
-        if 'water bottle' in command:
-            water.drink()
-        else:
-            drink_command = input("What do you want to drink?\n>").lower().strip()
-            if drink_command == 'water bottle':
-                water.drink()
-            elif 'nothing' in drink_command or 'nevermind' in drink_command or 'nvm' in drink_command:
-                print("ok")
-            else:
-                print(RED + BOLD + "You can't drink that." + END)
+                elif item.name.lower() in command:
+                    if item == water:
+                        water.drink()
+                    elif item == bed:
+                        time.sleep(1)
+                        print("ok")
+                        time.sleep(.5)
+                        print(BLUE + BOLD + "You drink the bed." + END)
+                        inventory.pop(inventoy.index(bed))
+                    else:
+                        print(RED + BOLD + "You can't drink that." + END)
+                else:
+                    print(RED + BOLD + "That's not in your inventory." + END)
     elif 'play' in command:
         if 'computer' in command:
             if head == cookieMask:
@@ -728,7 +774,7 @@ while True:
                 print(PURPLE + BOLD + "And it pops back..." + END)
             else:
                 print(RED + BOLD + "You play the game and rage in frustration at why you're so bad at it..." + END)
-        else:
+        elif command == 'play':
             play_command = input("What do you want to play?\n>").lower().strip()
             if play_command == 'computer':
                 if head == cookieMask:
@@ -741,54 +787,124 @@ while True:
                 print("ok")
             else:
                 print(RED + BOLD + "You can't play that." + END)
-
-
-
-
-
-
-    elif 'kill' in command:
-        if current_node.character is None:
-            print(RED + BOLD + "There is no one here." + END)
         else:
-            if command == 'kill':
-                kill_command = input("Who do you want to kill?\n>").lower()
-                if kill_command == 'me' or kill_command == 'self':
-                    time.sleep(2)
-                    print("ok")
-                    time.sleep(.5)
-                    while health != 0:
-                        health -= 1
-                        print(RED + BOLD + "Health: " + END + str(health))
-                        time.sleep(.01)
-                        if health == 0:
-                            break
-                elif kill_command == current_node.character.name.lower():
-                    if current_node.character.isAlive:
-                        current_node.character.kill()
-                    else:
-                        print(RED + BOLD + "That person is dead." + END)
+            print(RED + BOLD + "You can't play that." + END)
+    elif 'kill' in command:
+        if command == 'kill':
+            kill_command = input("Who do you want to kill?\n>").lower()
+            if kill_command == 'me' or kill_command == 'self':
+                time.sleep(2)
+                print("ok")
+                time.sleep(.5)
+                while health != 0:
+                    health -= 1
+                    print(RED + BOLD + "Health: " + END + str(health))
+                    time.sleep(.01)
+                    if health == 0:
+                        break
+            elif kill_command == current_node.character.name.lower():
+                if current_node.character.isAlive:
+                    current_node.character.kill()
                 else:
-                    print(RED + BOLD + "That person isn't here." + END)
+                    print(RED + BOLD + "That person is dead." + END)
             else:
-                if 'me' in command or 'self' in command:
-                    time.sleep(2)
-                    print("ok")
-                    time.sleep(.5)
-                    while health != 0:
-                        health -= 1
-                        print(RED + BOLD + "Health: " + END + str(health))
-                        time.sleep(.01)
-                        if health == 0:
-                            break
-                elif current_node.character.name.lower() in command:
-                    if current_node.character.isAlive:
-                        current_node.character.kill()
+                print(RED + BOLD + "That person isn't here." + END)
+        elif current_node.character is None:
+            print(RED + BOLD + "There is no one here." + END)
+        elif current_node.character.name.lower() in command:
+            if current_node.character.isAlive:
+                current_node.character.kill()
+            else:
+                print(RED + BOLD + "That person is dead." + END)
+        else:
+            print(RED + BOLD + "That person isn't here." + END)
+    elif 'suicide' in command:
+        time.sleep(2)
+        print("ok")
+        time.sleep(.5)
+        while health != 0:
+            health -= 1
+            print(RED + BOLD + "Health: " + END + str(health))
+            time.sleep(.01)
+            if health == 0:
+                break
+    elif 'open' in command:
+        if not inventory:
+            print(RED + BOLD + "You don't have anything in your inventory to open." + END)
+        else:
+            for item in inventory:
+                if command == 'open':
+                    open_command = input("What do you want to open?\n>").lower()
+                    if open_command == item.name.lower():
+                        if isinstance(item, Container):
+                            item.open()
+                        else:
+                            print(RED + BOLD + "You can't open that." + END)
+                    elif 'nothing' in take_command or 'nevermind' in take_command or 'nvm' in take_command:
+                        print("ok")
                     else:
-                        print(RED + BOLD + "That person is dead." + END)
+                        print(RED + BOLD + "That isn't in your inventory." + END)
+                elif item.name.lower() in command:
+                    if isinstance(item, Container):
+                        item.open()
+                    else:
+                        print(RED + BOLD + "You can't open that." + END)
                 else:
-                    print(RED + BOLD + "That person isn't here." + END)
+                    print(RED + BOLD + "That is not in your inventory." + END)
+    elif 'close' in command:
+        if not inventory:
+            print(RED + BOLD + "You don't have anything in your inventory to close." + END)
+        else:
+            for item in inventory:
+                if command == 'close':
+                    open_command = input("What do you want to close?\n>").lower()
+                    if open_command == item.name.lower():
+                        if isinstance(item, Container):
+                            item.close()
+                        else:
+                            print(RED + BOLD + "You can't close that." + END)
+                    elif 'nothing' in take_command or 'nevermind' in take_command or 'nvm' in take_command:
+                        print("ok")
+                    else:
+                        print(RED + BOLD + "That isn't in your inventory." + END)
+                elif item.name.lower() in command:
+                    if isinstance(item, Container):
+                        item.close()
+                    else:
+                        print(RED + BOLD + "You can't open that." + END)
+                else:
+                    print(RED + BOLD + "That is not in your inventory." + END)
 
+
+
+
+
+
+
+    elif 'put' in command:
+        if not inventory:
+            print(RED + BOLD + "You don't have anything in your inventory." + END)
+        else:
+            for item in inventory:
+                if command == 'put':
+                    put_command = input("What do you want to put?\n>").lower()
+                    if put_command == item.name.lower():
+                        for item2 in inventory:
+                            putIn_command = input("Where do you want to put that?\n").lower()
+                            if putIn_command == item2.name.lower():
+                                if isinstance(item2, Container):
+                                    if item2.isOpen:
+                                        item2.put_item_in(item)
+                                    else:
+                                        print(RED + BOLD + "That item isn't open." + END)
+                                else:
+                                    print(RED + BOLD + "You can't put that in there." + END)
+                            elif putIn_command == put_command:
+                                print(RED + BOLD + "You can't put that in itself." + END)
+                            else:
+                                print(RED + BOLD + "That isn't in your inventory." + END)
+                    else:
+                        print(RED + BOLD + "That isn't in your inventory." + END)
 
 
 

@@ -255,7 +255,7 @@ class Container(Item):
         else:
             print(RED + BOLD + "That is already closed." + END)
 
-    def drop(self):
+    def drop_all(self):
         for items in self.inventory:
             current_node.item = items
             self.inventory.pop(self.inventory.index(items))
@@ -475,7 +475,7 @@ while True:
         if current_node.character is not None \
                 and current_node.character.isAlive:
             current_node.character.print_descriptions()
-    command = input('>').lower()
+    command = input('>').lower().strip()
     if command == 'quit':
         quit(0)
     elif command == 'look' or command == 'l':
@@ -492,7 +492,13 @@ while True:
         else:
             print("Your inventory:")
             for item in inventory:
-                print(BOLD + item.name.lower() + END)
+                if isinstance(item, Container):
+                    if item.isOpen:
+                        print(BOLD + item.name.lower() + " (Open)" + END)
+                    else:
+                        print(BOLD + item.name.lower() + " (Closed)" + END)
+                else:
+                    print(BOLD + item.name.lower() + END)
     elif command == 'armor':
         if head is None and chest is None and legs is None and feet is None:
             print(RED + BOLD + "You're wearing nothing." + END)
@@ -677,20 +683,28 @@ while True:
                         print("ok")
                         time.sleep(.5)
                         head = bed
+                        inventory.pop(inventory.index(bed))
                         print(BLUE + BOLD + "You wear the bed." + END)
+                        break
                     elif wear_command == item.name.lower():
                         item.equip()
+                        break
                     else:
                         print(RED + BOLD + "That item isn't in your inventory." + END)
+                        break
                 elif 'bed' in command:
                     time.sleep(1)
                     print("ok")
                     head = bed
+                    inventory.pop(inventory.index(bed))
                     print(BLUE + BOLD + "You wear the bed." + END)
+                    break
                 elif item.name.lower() in command:
                     item.equip()
+                    break
                 else:
                     print(RED + BOLD + "You aren't wearing that.")
+                    break
     elif 'open door' in command:
         if current_node == LOCKED_DOOR:
             if techRoomKey in inventory:
@@ -715,6 +729,11 @@ while True:
                 print(RED + BOLD + "That person isn't here." + END)
         else:
             print(RED + BOLD + "You don't have anything to shoot with." + END)
+
+
+
+
+
     elif 'check' in command or 'look at' in command:
         for item in inventory:
             if not inventory:
@@ -731,6 +750,9 @@ while True:
                 item.print_descriptions()
             else:
                 print(RED + BOLD + "You don't have that item." + END)
+
+
+
     elif 'drink' in command:
         if not inventory:
             print(RED + BOLD + "You don't have anything in your inventory." + END)
@@ -840,13 +862,15 @@ while True:
                             item.open()
                         else:
                             print(RED + BOLD + "You can't open that." + END)
-                    elif 'nothing' in take_command or 'nevermind' in take_command or 'nvm' in take_command:
+                    elif 'nothing' in open_command or 'nevermind' in open_command or 'nvm' in open_command:
                         print("ok")
                     else:
                         print(RED + BOLD + "That isn't in your inventory." + END)
+                        break
                 elif item.name.lower() in command:
                     if isinstance(item, Container):
                         item.open()
+                        break
                     else:
                         print(RED + BOLD + "You can't open that." + END)
                 else:
@@ -857,13 +881,13 @@ while True:
         else:
             for item in inventory:
                 if command == 'close':
-                    open_command = input("What do you want to close?\n>").lower()
-                    if open_command == item.name.lower():
+                    close_command = input("What do you want to close?\n>").lower()
+                    if close_command == item.name.lower():
                         if isinstance(item, Container):
                             item.close()
                         else:
                             print(RED + BOLD + "You can't close that." + END)
-                    elif 'nothing' in take_command or 'nevermind' in take_command or 'nvm' in take_command:
+                    elif 'nothing' in close_command or 'nevermind' in close_command or 'nvm' in close_command:
                         print("ok")
                     else:
                         print(RED + BOLD + "That isn't in your inventory." + END)
@@ -873,7 +897,7 @@ while True:
                     else:
                         print(RED + BOLD + "You can't open that." + END)
                 else:
-                    print(RED + BOLD + "That is not in your inventory." + END)
+                    print(RED + BOLD + "That isn't in your inventory." + END)
 
 
 
@@ -885,9 +909,9 @@ while True:
         if not inventory:
             print(RED + BOLD + "You don't have anything in your inventory." + END)
         else:
-            for item in inventory:
-                if command == 'put':
-                    put_command = input("What do you want to put?\n>").lower()
+            if command == 'put':
+                put_command = input("What do you want to put?\n>").lower()
+                for item in inventory:
                     if put_command == item.name.lower():
                         for item2 in inventory:
                             putIn_command = input("Where do you want to put that?\n").lower()
@@ -902,7 +926,7 @@ while True:
                             elif putIn_command == put_command:
                                 print(RED + BOLD + "You can't put that in itself." + END)
                             else:
-                                print(RED + BOLD + "That isn't in your inventory." + END)
+                                print(RED + BOLD + "That is not in your inventory." + END)
                     else:
                         print(RED + BOLD + "That isn't in your inventory." + END)
 

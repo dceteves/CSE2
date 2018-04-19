@@ -695,6 +695,7 @@ while True:
                 elif 'bed' in command:
                     time.sleep(1)
                     print("ok")
+                    time.sleep(.5)
                     head = bed
                     inventory.pop(inventory.index(bed))
                     print(BLUE + BOLD + "You wear the bed." + END)
@@ -716,40 +717,44 @@ while True:
         else:
             print(RED + BOLD + "There is no locked door to open.")
     elif 'shoot' in command:
-        if backwardsGun in inventory:
-            if command == 'shoot':
-                backwardsGun_command = input("Who do you want to shoot?\n>").lower()
-                if backwardsGun_command == current_node.character.name.lower():
+        if not inventory:
+            print(RED + BOLD + "You don't have anything to shoot with." + END)
+        else:
+            if backwardsGun in inventory:
+                if command == 'shoot':
+                    backwardsGun_command = input("Who do you want to shoot?\n>").lower()
+                    if backwardsGun_command == current_node.character.name.lower():
+                        backwardsGun.shoot()
+                    else:
+                        print(RED + BOLD + "That person isn't here." + END)
+                elif current_node.character.name.lower() in command:
                     backwardsGun.shoot()
                 else:
                     print(RED + BOLD + "That person isn't here." + END)
-            elif current_node.character.name.lower() in command:
-                backwardsGun.shoot()
             else:
-                print(RED + BOLD + "That person isn't here." + END)
-        else:
-            print(RED + BOLD + "You don't have anything to shoot with." + END)
+                print(RED + BOLD + "You don't have anything to shoot with." + END)
 
 
 
 
 
     elif 'check' in command or 'look at' in command:
-        for item in inventory:
-            if not inventory:
-                print(RED + BOLD + "You don't have anything in your inventory." + END)
-            elif command == 'check' or command.strip() == 'lookat':
+        if not inventory:
+            print(RED + BOLD + "You don't have anything in your inventory." + END)
+        else:
+            if command == 'check':
                 check_command = input("What do you want to check?\n>").lower()
-                if check_command == item.name.lower():
-                    item.print_descriptions()
-                elif 'nothing' in check_command or 'nevermind' in check_command or 'nvm' in check_command:
-                    print("ok")
-                else:
-                    print(RED + BOLD + "You don't have that item." + END)
-            elif item.name.lower() in command:
-                item.print_descriptions()
-            else:
-                print(RED + BOLD + "You don't have that item." + END)
+                for item in inventory:
+                    if item.name.lower() in check_command:
+                        item.print_descriptions()
+                        break
+                    else:
+                        if check_command != item.name.lower():
+                            continue
+                        else:f
+                            print("a;lkdfjaskdlf")
+
+
 
 
 
@@ -873,8 +878,8 @@ while True:
                         break
                     else:
                         print(RED + BOLD + "You can't open that." + END)
-                else:
-                    print(RED + BOLD + "That is not in your inventory." + END)
+                # else:
+                #     print(RED + BOLD + "That is not in your inventory." + END)
     elif 'close' in command:
         if not inventory:
             print(RED + BOLD + "You don't have anything in your inventory to close." + END)

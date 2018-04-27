@@ -60,8 +60,8 @@ class Room(object):
             pass
         else:
             print("It seems you can take:")
-            for item in self.items:
-                print("\t" + bold + item.name.lower() + end)
+            for thing in self.items:
+                print("\t" + bold + thing.name.lower() + end)
 
 
     def move(self, directions):
@@ -103,7 +103,7 @@ class Room(object):
         if current_node == BATHROOM:
             print(bold + "..." + end)
             time.sleep(1)
-            print(bold + RED + "a man rises from the toilet and kills you" + end)
+            print(redbold + "a man rises from the toilet and kills you" + end)
             quit(0)
         else:
             print(redbold + "There's no toilet here u stupid" + end)
@@ -135,7 +135,7 @@ class Character(object):
             self.hasTalked = True
 
     def kill(self):
-        print(bold + RED + "oh woops you killed " + self.name.lower() + end)
+        print(redbold + "oh woops you killed " + self.name.lower() + end)
         self.isAlive = False
         # if None not in self.inventory:
 
@@ -157,10 +157,47 @@ class Item(object):
             current_node.items.pop(current_node.items.index(self))
             print(cyan + bold + "You take the " + self.name.lower() + "." + end)
 
+    def take_all(self):
+        while len(current_node.items) != 0:
+            for thing in current_node.items:
+                thing.take()
+
     def drop(self):
         inventory.pop(inventory.index(self))
         current_node.items.append(self)
         print(cyan + bold + "You drop the " + self.name.lower() + '.' + end)
+
+    def drop_all(self):
+        while len(inventory) != 0:
+            for thing in inventory:
+                thing.drop()
+
+
+class Bed(Item):
+    def __init__(self, name, desc):
+        super(Bed, self).__init__(name, desc)
+        self.body = head
+
+    def equip(self):
+        global head
+        if head is None:
+            time.sleep(1)
+            print("ok")
+            time.sleep(.5)
+            head = bed
+            print(blue + bold + "You wear the bed." + end)
+            inventory.pop(inventory.index(self))
+        else:
+            print(redbold + "You are already wearing something." + end)
+
+    def un_equip(self):
+        global head
+        if head is not None:
+            head = None
+            print(blue + bold + "You take off the bed." + end)
+            inventory.append(bed)
+        else:
+            print(redbold + "You are not wearing anything." + end)
 
 
 class Weapon(Item):
@@ -301,23 +338,27 @@ class Ball(Item):
         print(YELLOW + bold + "The dog comes back with a bucket with even more balls.")
         time.sleep(1)
 
+
 class Wearable(Item):
     def __init__(self, name, desc, body):
         super(Wearable, self).__init__(name, desc)
         self.body = body
 
     def equip(self):
-        if self.body is not None:
-            print(redbold + "You're already wearing something." + end)
-        else:
+        if self.body is None:
             self.body = self
             inventory.pop(inventory.index(self))
-            print(blue + bold + "You wear the " + self.name + end)
+            print(blue + bold + "You wear the " + self.name.lower() + '.' + end)
+        else:
+            print(redbold + "You're already wearing something." + end)
 
     def un_equip(self):
-        self.body = None
-        print(blue + bold + "You take off the " + self.name + end)
-        inventory.append(self)
+        if self.body is not None:
+            print(blue + bold + "You take off the %s." + end + self.name.lower())
+            self.body = None
+            inventory.append(self)
+        else:
+            print(redbold + "You are wearing nothing." + end)
 
 
 class Mask(Wearable):
@@ -331,12 +372,16 @@ class Mask(Wearable):
         else:
             head = self
             inventory.pop(inventory.index(self))
-            print(blue + bold + "You wear the " + self.name + end)
+            print(blue + bold + "You wear the " + self.name.lower() + "." + end)
 
     def un_equip(self):
         global head
-        head = None
-        inventory.append(self)
+        if head is not None:
+            print(blue + bold + "You take off the %s." + end + self.name.lower())
+            head = None
+            inventory.append(self)
+        else:
+            print(redbold + "You are wearing nothing." + end)
 
 
 class Shirt(Wearable):
@@ -346,17 +391,22 @@ class Shirt(Wearable):
     def equip(self):
         global chest
         if chest is None:
-            print(redbold + "You're already wearing something." + end)
-        else:
             chest = self
             inventory.pop(inventory.index(self))
-            print(blue + bold + "You wear the %s." + end + self.name.lower())
+            print(blue + bold + "You wear the " + self.name.lower() +'.' + end)
+        else:
+            print(redbold + "You're already wearing something." + end)
+
 
     def un_equip(self):
         global chest
-        print(blue + bold + "You take off the %s." + end + self.name.lower())
-        chest = None
-        inventory.append(self)
+        if chest is not None:
+            print(blue + bold + "You take off the %s." + end + self.name.lower())
+            chest = None
+            inventory.append(self)
+        else:
+            print(redbold + "You are wearing nothing." + end)
+
 
 
 class Book(Item):
@@ -376,7 +426,7 @@ Cookie = Character("Cookiezi", "This person seems to be sitting behind a desk wi
 jeff = Character("jeff", "he's sitting on a chair playing a game on the left side of the room", "stop", ['pen'], 50)
 
 cookie = Food("Cookie", "A chocolate chip cookie. Seems delicious.")
-bed = Item("Bed", "Your average-looking bed.")
+bed = Bed("Bed", "Your average-looking bed.")
 ball = Ball("Ball", "A regular, old tennis ball.")
 techRoomKey = Item("Key", "The key has a message engraved that says 'Tech Room Key'...")
 backwardsGun = BackwardsGun("Gun", "It's a gun, but its barrel is pointing the opposite way.")
@@ -391,11 +441,11 @@ weirdBag = Container("Backpack", "Just a regular backpack.", 4)
 BEDROOM = Room("Bedroom",
                "You are in a bedroom full of anime posters, figures, etc."
                "\nYou have a computer sitting on a desk to your north, and a door to the east.",
-               "COMPUTER", None, "HALLWAY", None, None, None, None, [bed])
+               "COMPUTER", None, "HALLWAY", None, None, None, None, [bed, shirt])
 COMPUTER = Room("Computer",
                 "On the desk lies a computer with a crappy membrane keyboard and a mouse. "
                 "On the computer lies a weird game called 'osu!'...",
-                None, "BEDROOM", "HALLWAY", None, None, None, None, [weirdBag])
+                None, "BEDROOM", "HALLWAY", None, None, None, None, [weirdBag, cookieMask])
 HALLWAY = Room("Hallway",
                "The hallway has a few paintings with a dull red carpet on the wooden floor."
                "\nThere are stairs leading down to the south, as well as another room across yours.",
@@ -433,7 +483,7 @@ CABINET = Room("Inside of Cabinet",
                "Inside the cabinet contains jackets and sweaters. The shelf above it has a \n"
                "few boxes put for storage, but there's a paper mask of a man's face here...",
                # osu! joke, don't worry about it
-               None, "LAUNDRY_ROOM", "KITCHEN2", None, None, None, None, [cookieMask])
+               None, "LAUNDRY_ROOM", "KITCHEN2", None, None, None, None, [])
 BACKYARD1 = Room("Backyard",
                  "The empty backyard had little to no grass, making it look like a desert.\nNot only that, there "
                  "are two dogs that seem to not care about it at all\nand just have fun with the tennis balls "
@@ -500,7 +550,7 @@ while True:
         else:
             print("Your inventory:")
             for item in inventory:
-                print(bold + item.name.lower() + end)
+                print("\t" + bold + item.name.lower() + end)
     elif 'armor' in command:
         if head is None and chest is None and legs is None and feet is None:
             print(redbold + "You're wearing nothing." + end)
@@ -539,57 +589,65 @@ while True:
         except KeyError:
             print(RED + "You can't go that way." + end)
             current_node_hasChanged = False
-    elif 'take off' in command or 'unequip' in command:
-        if command == 'take off' or command == 'unequip':
-            if head is None and chest is None and legs is None and feet is None:
-                print(redbold + "You aren't wearing anything." + end)
-            else:
-                unequip_command = input("What do you want to take off?\n>").lower()
-                if head is not None:
-                    if head == bed and unequip_command == 'bed':
-                        head = None
-                        inventory.append(bed)
-                        print(blue + bold + "You take off the bed." + end)
-                    elif unequip_command == head.name.lower():
-                        head.unequip()
-                    else:
-                        print(redbold + "You aren't wearing that." + end)
-                elif chest is not None:
-                    if unequip_command == chest.name.lower():
-                        chest.unequip()
-                    else:
-                        print(redbold + "You aren't wearing that." + end)
-                elif legs is not None:
-                    if unequip_command == legs.name.lower():
-                        legs.unequip()
-                    else:
-                        print(redbold + "You aren't wearing that." + end)
-                elif feet is not None:
-                    if unequip_command == feet.name.lower():
-                        feet.unequip()
-                    else:
-                        print(redbold + "You aren't wearing that." + end)
-                else:
-                    print(redbold + "You aren't wearing that.")
+    elif 'wear' in command:
+        if not inventory:
+            print(redbold + "You don't have anything in your inventory." + end)
         else:
-            if head is not None:
-                if 'bed' in command:
-                    head = None
-                    inventory.append(bed)
-                    print(blue + bold + "You take off the bed." + end)
-                elif head.name.lower() in command:
-                    head.unequip()
-            elif chest is not None:
-                if chest.name.lower() in command:
-                    chest.unequip()
-            elif legs is not None:
-                if legs.name.lower() in command:
-                    legs.unequip()
-            elif feet is not None:
-                if feet.name.lower() in command:
-                    feet.unequip()
+            if command == 'wear':
+                wear_command = input("What do you want to wear?\n>").lower()
+                for item in inventory:
+                    if item.name.lower() == wear_command:
+                        if issubclass(type(item), Wearable) or isinstance(item, Bed):
+                            if item.body is None:
+                                item.equip()
+                            else:
+                                print(redbold + "You're already wearing something." + end)
+                        else:
+                            print(redbold + "You can't wear that." + end)
+                    elif 'nothing' in wear_command or 'nevermind' in wear_command or 'nvm' in wear_command:
+                        print("ok")
+                        break
+                    else:
+                        if item.name.lower() != wear_command:
+                            continue
+                        else:
+                            print(redbold + "That item isn't in your inventory." + end)
             else:
-                print(redbold + "You aren't wearing anything.")
+                for item in inventory:
+                    if item.name.lower() in command:
+                        if issubclass(type(item), Wearable) or isinstance(item, Bed):
+                            if item.body is None:
+                                item.equip()
+                            else:
+                                print(redbold + "You're already wearing something." + end)
+                        else:
+                            print(redbold + "You can't wear that." + end)
+                    else:
+                        if item.name.lower() not in command:
+                            continue
+                        else:
+                            print(redbold + "That item isn't in your inventory." + end)
+
+    elif 'take off' in command or 'unequip' in command:
+        if head is None and chest is None and legs is None and feet is None:
+            print(redbold + "You aren't wearing anything." + end)
+        else:
+            if command == 'take off' or command == 'unequip':
+                unequip_command = input("What do you want to take off?\n>").lower()
+                if unequip_command == head.name.lower():
+
+
+            else:
+                if head.name.lower() in command:
+                    head.un_equip()
+                elif chest.name.lower() in command:
+                    chest.un_equip()
+                elif legs.name.lower() in command:
+                    legs.un_equip()
+                elif feet.name.lower() in command:
+                    feet.unequip()
+                else:
+                    print(redbold + "You aren't wearing that." + end)
     elif 'take' in command or 'pickup' in command.strip():
         if not current_node.items:
             print(redbold + "There is nothing here to take." + end)
@@ -597,24 +655,30 @@ while True:
             if command.strip() == 'take' or command.strip() == 'pickup':
                 take_command = input("What do you want to take?\n>").lower().strip()
                 for item in current_node.items:
-                    if take_command != item.name.lower():
-                        continue
+                    if 'all' in take_command:
+                        item.take_all()
                     elif take_command == item.name.lower():
                         item.take()
-                        break
                     elif 'nothing' in take_command or 'nevermind' in take_command or 'nvm' in take_command:
                         print("ok")
+                        break
                     else:
-                        print(redbold + "That item isn't here." + end)
+                        if item.name.lower() != take_command:
+                            pass
+                        else:
+                            print(redbold + "That item isn't here." + end)
+
             else:
                 for item in current_node.items:
-                    if item.name.lower() in command:
+                    if 'all' in command:
+                        item.take_all()
+                    elif item.name.lower() in command:
                         item.take()
-                        break
-                    elif item.name.lower() not in command:
-                        continue
                     else:
-                        print(redbold + "That item isn't here." + end)
+                        if item.name.lower() not in command:
+                            continue
+                        else:
+                            print(redbold + "That item isn't here." + end)
     elif 'drop' in command:
         if not inventory:
             print(redbold + "You don't have anything in your inventory." + end)
@@ -622,28 +686,30 @@ while True:
             if command == 'drop':
                 drop_command = input("What do you want to drop?\n>").lower()
                 for item in inventory:
-                    if drop_command == item.name.lower():
+                    if 'all' in command:
+                        item.drop_all()
+                    elif drop_command == item.name.lower():
                         item.drop()
-                        break
-                    elif drop_command != item.name.lower():
-                        continue
                     elif 'nothing' in drop_command or 'nevermind' in drop_command or 'nvm' in drop_command:
                         print("ok")
                         break
                     else:
-                        print(redbold + "You don't have that item." + end)
+                        if item.name.lower != drop_command:
+                            continue
+                        else:
+                            print(redbold + "You don't have that item." + end)
             else:
                 for item in inventory:
-                    if item.name.lower() in command:
+                    if 'all' in command:
+                        item.drop_all()
+                    elif item.name.lower() in command:
                         item.drop()
                         break
-                    elif item.name.lower() not in command:
-                        continue
                     else:
-                        print(redbold + "You don't have that item." + end)
-
-
-
+                        if item.name.lower() not in command:
+                            continue
+                        else:
+                            print(redbold + "You don't have that item." + end)
     elif 'throw' in command:
         if not inventory:
             print(redbold + "You don't have anything in your inventory." + end)
@@ -651,35 +717,37 @@ while True:
             if command == 'throw':
                 throw_command = input("What do you want to throw?\n>").lower()
                 for item in inventory:
-                    if throw_command == item.name.lower():
+                    if 'all' in throw_command:
+                        item.drop_all()
+                    elif throw_command == item.name.lower():
                         if item == ball:
                             ball.throw()
                         else:
                             item.drop()
-                    elif throw_command != item.name.lower():
-                        continue
                     elif 'nothing' in throw_command or 'nevermind' in throw_command or 'nvm' in throw_command:
                         print("ok")
+                        break
                     else:
-                        print(redbold + "You don't have that item." + end)
+                        if throw_command != item.name.lower():
+                            continue
+                        else:
+                            print(redbold + "You don't have that item." + end)
             else:
                 for item in inventory:
-                    if item.name.lower() in command:
+                    if 'all' in command:
+                        item.drop_all()
+                    elif item.name.lower() in command:
                         if item == ball:
                             ball.throw()
                         else:
                             item.drop()
-                    elif item.name.lower() not in command:
-                        continue
                     else:
-                        print(rebold + "You don't have that item." + end)
-
-
-
-
-
+                        if item.name.lower() not in command:
+                            continue
+                        else:
+                            print(rebold + "You don't have that item." + end)
     elif 'talk' in command:
-        if current_node.character is None:
+        if current_node.character is None or not current_node.character.isAlive:
             print(redbold + "There is no one here." + end)
         elif command == 'talk':
             talk_command = input("Who do you want to talk to?\n>").lower().strip()
@@ -701,32 +769,7 @@ while True:
                 print(redbold + "That person isn't here." + end)
         else:
             print(redbold + "That person isn't here." + end)
-    elif 'wear' in command:
-        if not inventory:
-            print(redbold + "You don't have anything in your inventory." + end)
-        else:
-            for item in inventory:
-                if command == 'wear':
-                    wear_command = input("What do you want to wear?\n>").lower()
-                    if wear_command == 'bed':
-                        time.sleep(1)
-                        print("ok")
-                        time.sleep(.5)
-                        head = bed
-                        print(blue + bold + "You wear the bed." + end)
-                    elif wear_command == item.name.lower():
-                        item.equip()
-                    else:
-                        print(redbold + "That item isn't in your inventory." + end)
-                elif 'bed' in command:
-                    time.sleep(1)
-                    print("ok")
-                    head = bed
-                    print(blue + bold + "You wear the bed." + end)
-                elif item.name.lower() in command:
-                    item.equip()
-                else:
-                    print(redbold + "You aren't wearing that.")
+
     elif 'open door' in command:
         if current_node == LOCKED_DOOR:
             if techRoomKey in inventory:

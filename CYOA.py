@@ -289,23 +289,26 @@ class Container(Item):
         self.isEmpty = False
 
     def lookin(self):
-        print("In " + self.name.lower() + ":")
-        for items in self.inventory:
-            print("\t" + bold + items.name.lower() + end)
+        if not self.inventory:
+            print(redbold + "This " + self.name.lower() + " doesn't have anything in it." + end)
+        else:
+            print("In " + self.name.lower() + ":")
+            for items in self.inventory:
+                print("\t" + bold + items.name.lower() + end)
 
 
     def put_item_in(self, item_name):
-        if self.inventory.len() == capacity:
+        if len(self.inventory) == self.capacity:
             print(redbold + "Your inventory is full." + end)
         else:
             self.inventory.append(item_name)
             inventory.pop(inventory.index(item_name))
-            print(cyanbold + "You put the " + item_name.name.lower() + " in the " + self.name.lower() + end)
+            print(cyanbold + "You put the " + item_name.name.lower() + " in the " + self.name.lower() + "." + end)
 
     def take_out(self, item_name):
         self.inventory.pop(self.inventory.index(item_name))
         inventory.append(item_name)
-        print(cyanbold + "You take the %s out of the %s." + end % (item_name.lower(), self.name.lower()))
+        print(cyanbold + "You take out the " + item_name.name.lower() + " from the " + self.name.lower() + "." + end)
 
     def open(self):
         if not self.isOpen:
@@ -321,10 +324,14 @@ class Container(Item):
         else:
             print(redbold + "That is already closed." + end)
 
-    # def drop(self):
-    #     for items in self.inventory:
-    #         current_node.items = items
-    #         self.inventory.pop(self.inventory.index(items))
+    def random_drop(self): # only for weirdBag
+        if self.isOpen:
+            for items in self.inventory:
+                current_node.items.append(items)
+                self.inventory.pop(self.inventory.index(items))
+                break
+        else:
+            pass
 
 
 class Box(Container):
@@ -541,9 +548,9 @@ dir2 = ['n', 's', 'e', 'w', 'u', 'd']
 current_node = BEDROOM
 current_node_hasChanged = True
 
-print("\n" + "When using the put command, make sure the syntax is:"
-      + greenbold + "\nput <item1 name> in <item2 name>"
-      + end + "\nEx: put mask in backpack\nDon't add any extra words!" + "\n")
+print("\n" + "When using the put or take out command, make sure the syntax is:"
+      + greenbold + "\nput/take out <item1 name> in/from <item2 name>" + end
+      + "\nEx: put mask in backpack\n\ttake out mask from backpack\nDon't add any extra words!" + "\n")
 
 while True:
     if health == 0:
@@ -556,6 +563,14 @@ while True:
         if current_node.character is not None \
                 and current_node.character.isAlive:
             current_node.character.print_descriptions()
+
+        if weirdBag in inventory:
+            if not weirdBag.inventory:
+                pass
+            else:
+                weirdBag.random_drop()
+
+
     command = input('>').lower()
     if command == 'quit':
         quit(0)
@@ -648,6 +663,50 @@ while True:
                             pass
                         else:
                             print(redbold + "You don't have that in your inventory." + end)
+    elif 'put' in command:
+        if not inventory:
+            print(redbold + "You don't have anything in your inventory." + end)
+        else:
+            splitCommand = command.split()
+            item1 = None
+            item2 = None
+            for i, item in enumerate(inventory):
+                if item.name.lower() == splitCommand[1]:
+                    item1 = item
+                if item.name.lower() == splitCommand[3]:
+                    item2 = item
+
+            if not issubclass(type(item1), Item) or not issubclass(type(item2), Item):
+                print(redbold + "You don't have those items." + end)
+            elif item1 == item2:
+                print(redbold + "You can't put something in itself." + end)
+            elif item1 is not None and item2 is not None:
+                if isinstance(item2, Container):
+                    if item2.isOpen:
+                        item2.put_item_in(item1)
+                    else:
+                        print(redbold + "The container isn't open." + end)
+                else:
+                    print(redbold + "You can't put that in there." + end)
+    elif 'take out' in command:
+        if not inventory:
+            print(redbold + "You don't have anything in your inventory." + end)
+        else:
+            splitCommand = command.split()
+            container = None
+            for item in inventory:
+                if item.name.lower() == splitCommand[4]:
+                    if isinstance(item, Container):
+                        container = item
+                    else:
+                        print(redbold + "You don't have a container." + end)
+                        break
+            for i, item in enumerate(container.inventory):
+                if item.name.lower() == splitCommand[2]:
+                    container.take_out(item)
+                    break
+                else:
+                    print(redbold + "That item is not in the container." + end)
     elif 'take off' in command or 'unequip' in command:
         if head is None and chest is None and legs is None and feet is None:
             print(redbold + "You aren't wearing anything." + end)
@@ -1031,67 +1090,56 @@ while True:
                             pass
                         else:
                             print(redbold + "That is not in your inventory." + end)
-
-
-
-    elif 'put' in command:
-        if not inventory:
-            print(redbold + "You don't have anything in your inventory." + end)
-        else:
-            splitCommand = command.split()
-            item1 = None
-            item2 = None
-            # for i, item in enumerate(inventory):
-            for iterItem1, iterItem2 in zip(inventory, inventory):
-                if item.name.lower() in splitCommand[1]:
-                    item1 = iterItem1
-                elif item.name.lower() in splitCommand[3]:
-                    item2 = iterItem2
-            if item1 is not None and item2 is not None:
-                if isinstance(item2, Container):
-                    if item2.isOpen:
-                        item2.put_item_in(item)
-                        break
-                    else:
-                        print(redbold + "The container isn't open." + end)
-                elif item1 == item2:
-                    print(redbold + "You can't put that in itself." + end)
-                else:
-                    print(redbold + "You can't put that in there." + end)
-            else:
-                print(redbold + "You can't put that in there." + end)
-                break
-
     elif 'look in' in command:
         if not inventory:
             print(redbold + "You don't have anything to look in." + end)
         else:
-            if command.split() == 'look in':
+            if command.strip() == 'look in':
                 look_command = input("What do you want to look in?\n>").lower()
                 for i, item in enumerate(inventory):
                     if item.name.lower() in look_command:
-                        if issubclass(type(item), Container):
+                        if isinstance(item, Container):
                             if item.isOpen:
                                 item.lookin()
+                                break
                             else:
-                                print(redbold + "That item isn't open." + end)
+                                print(redbold + "The container isn't open." + end)
+                                break
                         else:
-                            print(redbold + "You can't look in there." + end)
+                            print(redbold + "You can't look in that." + end)
+                            break
+                    elif 'nothing' in look_command or 'nevermind' in look_command or 'nvm' in look_command:
+                        print("ok")
+                        break
                     else:
                         if i != len(inventory) - 1:
                             pass
                         else:
-                            print(redbold + "You can't look in there." + end)
+                            print(redbold + "That isn't in your inventory." + end)
+                            break
+            else:
+                for i, item in enumerate(inventory):
+                    if item.name.lower() in command:
+                        if isinstance(item, Container):
+                            if item.isOpen:
+                                item.lookin()
+                                break
+                            else:
+                                print(redbold + "The container isn't open." + end)
+                                break
+                        else:
+                            print(redbold + "You can't look in that." + end)
+                    else:
+                        if i != len(inventory) - 1:
+                            pass
+                        else:
+                            print(redbold + "That isn't in your inventory." + end)
     elif 'look' in command or command == 'l':
         current_node.print_descriptions()
         if current_node.character is None or not current_node.character.isAlive:
             continue
         else:
             current_node.character.print_descriptions()
-
-
-
-
     else:
         print("Command not Recognized")
         current_node_hasChanged = False
